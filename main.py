@@ -18,14 +18,14 @@
 import sys
 
 from lexer import Lexer
-#import parser
+import parser
 
 
 userdefined = {
     # "atoms" which don't have any special value
     "atom": ["while", "if", "else", "return"]
-        + ["+=", "-=", "<=", ">=", "=="]
-        + list("(){}[]@+-~|&^=<>,"),
+        + [">>>", ">>", "<<", "<", ">" "<=", ">=", "!=", "=="]
+        + list("(){}*+-~|&^=<>,"),
 
     # types are nice to have separately though
     "type": ["u0", "u8", "u16"]
@@ -39,17 +39,24 @@ def main(argv):
     
     source = ""
     try:
-        with open("test", "r") as f:
+        with open(argv[1], "r") as f:
             source = f.read()
     except IOError as e:
         print("failed to open source file:", e)
         return 1
 
-    print("source dump\n", source, "\n")
+    print("source dump")
+    print(source, "\n")
+
     lexer = Lexer(userdefined)
-    tokens = lexer.tokenize(source)
-    for tok in tokens:
+    print("lexer dump")
+    for tok in lexer.tokenize(source):
         print(tok)
+
+    tokens = lexer.tokenize(source)
+    ast = parser.parse(tokens)
+    print("\nparser dump")
+    print(parser.prettify_ast(ast))
     
     return 0
 

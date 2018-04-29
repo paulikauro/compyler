@@ -1,0 +1,34 @@
+# grammar for the language
+# written in the way it is parsed
+# but not including names for all productions
+
+program ::= function*
+
+function ::= vardecl '(' (vardecl (',' vardecl)*)? ')' statement
+
+# vardecl and fcall are just common stuff refactored out
+vardecl ::= type ('*')* identifier
+# fcall is incomplete, needs an identifier before it
+fcall ::= '(' expression (',' expression)*)? ')'
+
+block ::= '{' statement* '}'
+
+if ::= 'if' condition statement ('else' statement)?
+
+while ::= 'while' condition statement
+
+statement ::= block | if | while | 'break' | 'continue' | 'return' expression | (vardecl ('=' expression)? | '*' factor '=' expression | identifier '=' expression | identifier fcall
+
+condition ::= expression ('==' | '!=' | '>' | '<' | '>=' | '<=') expression
+
+expression ::= shift (('+' | '-') shift)*
+
+shift ::= bitwise (('<<' | '>>' | '>>>') bitwise)*
+
+bitwise ::= unary (('&' | '|' | '^') unary)*
+
+unary ::= ('-' | '~' | '*' | '&')* factor
+
+factor ::= '(' expression ')' | integer | string |
+	identifier fcall?
+

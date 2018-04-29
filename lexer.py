@@ -29,8 +29,16 @@ class Token(object):
         self.line = line
         # line information is used by later passes in the compiler
         # to generate meaningful error messages
+
+    def __eq__(self, other):
+        # this is just to make parsing easier
+        # token.type == "type" vs token == "type"
+        if isinstance(other, Token):
+            return self.type == other.type
+        else:
+            return self.type == other
     
-    def __str__(self):
+    def __repr__(self):
         return "line {}: {}\t '{}'".format(self.line, self.type, self.value)
 
 
@@ -99,7 +107,7 @@ class Lexer(object):
                     # fix some names
                     if k == "hex":
                         v = int(v, 16)
-                        v = "int"
+                        k = "int"
                     elif k == "int":
                         v = int(v)
                     elif k == "atom":
