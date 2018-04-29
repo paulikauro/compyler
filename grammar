@@ -10,7 +10,7 @@ function ::= vardecl '(' (vardecl (',' vardecl)*)? ')' statement
 /* vardecl and fcall are just common stuff refactored out /*
 vardecl ::= type ('*')* identifier
 /* fcall is incomplete, needs an identifier before it */
-fcall ::= '(' expression (',' expression)*)? ')'
+fcall ::= '(' (expression (',' expression)*)? ')'
 
 block ::= '{' statement* '}'
 
@@ -18,7 +18,7 @@ if ::= 'if' condition statement ('else' statement)?
 
 while ::= 'while' condition statement
 
-statement ::= block | if | while | 'break' | 'continue' | 'return' expression | (vardecl ('=' expression)? | '*' factor '=' expression | identifier '=' expression | identifier fcall
+statement ::= block | if | while | 'break' | 'continue' | 'return' expression | vardecl ('=' expression)? | '*' factor '=' expression | identifier '=' expression | identifier fcall
 
 condition ::= expression ('==' | '!=' | '>' | '<' | '>=' | '<=') expression
 
