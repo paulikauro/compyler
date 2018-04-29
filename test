@@ -1,3 +1,9 @@
+struct Test {
+	u8 field1;
+	i16 field2;
+	Test *next;
+}
+
 u8 *strcpy(u8 *dest, u8 *src) {
 	while *src != 0 {
 		*dest = *src;
@@ -10,8 +16,18 @@ u8 *strcpy(u8 *dest, u8 *src) {
 }
 
 u0 main() {
-	b8 thing;
+	u8 *thing = malloc(8);
+	if thing == 0
+		return 1;
 	u8 *str = "hello";
-	strcpy(&thing, src);
+	strcpy(thing, src);
+
+	Test t;
+	u8 a = sizeof t;
+	t.field1 = 3;
+	t.next = &t;
+	# below line equivalent to: t.field2 = -t.field1
+	t.next.field2 = -t.next.next.field1 + t.field2;
 	return 0;
 }
+
