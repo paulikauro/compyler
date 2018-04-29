@@ -1,16 +1,17 @@
 u8 *strcpy(u8 *dest, u8 *src) {
 	while *src != 0 {
-		*dest = *src
-		dest = dest + 1
-		src = src + 1
+		*dest = *src;
+		dest = dest + 1;
+		src = src + 1;
 	}
-	return dest
+	# copy the null terminator as well
+	*dest = *src;
+	return dest;
 }
 
 u0 main() {
-	u8 *a = 0xFF
-	u8 *b = 0xAF
-	*(b + 4) = 0
-	strcpy(a, b)
-	return 0
+	b8 thing;
+	u8 *str = "hello";
+	strcpy(&thing, src);
+	return 0;
 }

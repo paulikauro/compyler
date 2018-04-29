@@ -25,10 +25,10 @@ userdefined = {
     # "atoms" which don't have any special value
     "atom": ["while", "if", "else", "return"]
         + [">>>", ">>", "<<", "<", ">" "<=", ">=", "!=", "=="]
-        + list("(){}*+-~|&^=<>,"),
+        + list("(){}*/+-~|&^=<>,;"),
 
     # types are nice to have separately though
-    "type": ["u0", "u8", "u16"]
+    "type": ["u0", "u8", "u16", "i8", "i16", "b1", "b2", "b4", "b8"]
 }
 
 

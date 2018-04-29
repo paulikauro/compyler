@@ -18,11 +18,13 @@ if ::= 'if' condition statement ('else' statement)?
 
 while ::= 'while' condition statement
 
-statement ::= block | if | while | 'break' | 'continue' | 'return' expression | vardecl ('=' expression)? | '*' factor '=' expression | identifier '=' expression | identifier fcall
+statement ::= block | if | while | 'break' ';' | 'continue' ';' | 'return' expression ';' | vardecl ('=' expression)? ';' | '*' factor '=' expression ';' | identifier '=' expression ';' | identifier fcall ';'
 
 condition ::= expression ('==' | '!=' | '>' | '<' | '>=' | '<=') expression
 
-expression ::= shift (('+' | '-') shift)*
+expression ::= mult (('+' | '-') mult)*
+
+mult ::= shift (('*' | '/') shift)*
 
 shift ::= bitwise (('<<' | '>>' | '>>>') bitwise)*
 

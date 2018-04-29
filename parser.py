@@ -65,7 +65,8 @@ def expect(tok, *expects):
 def parse_program(tok):
     ast = ["root", 0]
     while tok.peek != "eof":
-        ast.append(parse_function(tok))
+        f = parse_function(tok)
+        ast.append(f)
     return ast
 
 def parse_function(tok):
@@ -145,11 +146,18 @@ def parse_statement(tok):
     elif tok.peek == "while":
         return parse_while(tok)
     elif tok.peek == "break":
-        return ["break", tok.next().line]
+        t = tok.next()
+        expect(tok, ";")
+        return ["break", t.line]
     elif tok.peek == "continue":
-        return ["cont", tok.next().line]
+        t = tok.next()
+        expect(tok, ";")
+        return ["cont", t.line]
     elif tok.peek == "return":
-        return ["ret", tok.next().line, parse_expression(tok)]
+        t = tok.next()
+        e = parse_expression(tok)
+        expect(tok, ";")
+        return ["ret", t.line, e]
     elif tok.peek == "type":
         # variable declaration
         line = tok.peek.line
@@ -160,6 +168,7 @@ def parse_statement(tok):
             init = parse_expression(tok)
         else:
             init = ["iliteral", line, 0]
+        expect(tok, ";")
         return ["vardecl", line, t, i, init]
     elif tok.peek == "*":
         # memory store
@@ -170,15 +179,19 @@ def parse_statement(tok):
         f = parse_factor(tok)
         t = expect(tok, "=")
         e = parse_expression(tok)
+        expect(tok, ";")
         return ["store", t.line, ptr, f, e]
     else:
         # function call or assignment
         i = expect(tok, "id")
         if tok.peek == "(":
-            return parse_fcall(tok, i)
+            f = parse_fcall(tok, i)
+            expect(tok, ";")
+            return f
         # assignment or error
         t = expect(tok, "=")
         e = parse_expression(tok)
+        expect(tok, ";")
         return ["assign", t.line, i.value, e]
 
 def parse_condition(tok):
@@ -198,6 +211,17 @@ def parse_expression(tok):
     ops = {
         "+": "add",
         "-": "sub"
+    }
+    ret = parse_mult(tok)
+    while tok.peek.type in ops:
+        t = tok.next()
+        ret = [ops[t.type], t.line, ret, parse_mult(tok)]
+    return ret
+
+def parse_mult(tok):
+    ops = {
+        "*": "mul",
+        "/": "div"
     }
     ret = parse_shift(tok)
     while tok.peek.type in ops:
@@ -243,6 +267,7 @@ def parse_unary(tok):
     count = 1
     while tok.peek == t:
         count += 1
+
     if t in ("-", "~") and count % 2 == 0:
         # double inversion, double negation cancel out
         return parse_factor(tok)
