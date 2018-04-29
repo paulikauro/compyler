@@ -1,14 +1,15 @@
-# grammar for the language
-# written in the way it is parsed
-# but not including names for all productions
+/* grammar for the language
+ * written in the way it is parsed
+ * but not including names for all productions
+ */
 
 program ::= function*
 
 function ::= vardecl '(' (vardecl (',' vardecl)*)? ')' statement
 
-# vardecl and fcall are just common stuff refactored out
+/* vardecl and fcall are just common stuff refactored out /*
 vardecl ::= type ('*')* identifier
-# fcall is incomplete, needs an identifier before it
+/* fcall is incomplete, needs an identifier before it */
 fcall ::= '(' expression (',' expression)*)? ')'
 
 block ::= '{' statement* '}'
