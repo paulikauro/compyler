@@ -19,6 +19,7 @@ import sys
 
 from lexer import Lexer
 import parser
+import typecheck
 
 
 userdefined = {
@@ -42,18 +43,28 @@ def main(argv):
         print("failed to open source file:", e)
         return 1
 
-    print("source dump")
-    print(source, "\n")
+    try:
+        # create a lexer object
+        # note: the same object can be used to tokenize multiple source files
+        # (possibly thread-safe)
+        lexer = Lexer(userdefined)
+        tokens = lexer.tokenize(source)
 
-    lexer = Lexer(userdefined)
-    print("lexer dump")
-    for tok in lexer.tokenize(source):
-        print(tok)
+        # parse into an abstract syntax tree
+        ast, structs = parser.parse(tokens)
 
-    tokens = lexer.tokenize(source)
-    ast = parser.parse(tokens)
-    print("\nparser dump")
-    print(parser.prettify_ast(ast))
+        # for debug purposes; this will be removed or changed later
+        # prettify_ast returns a lisp-like string representation of the tree
+        print("[debug] ast")
+        print(parser.prettify_ast(ast))
+
+        # perform type and scope checking
+        tree = typecheck.check(ast, structs)
+        
+    # add LexerException later
+    except parser.ParserException as e:
+        print(argv[1] + ":", e)
+        return 1
     
     return 0
 

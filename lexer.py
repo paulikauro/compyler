@@ -19,7 +19,7 @@ import re
 
 class LexerException(Exception):
     def __init__(self, msg, line):
-        super().__init__("lexer: {}: {}".format(str(line), msg))
+        super().__init__("{}: lexer: {}".format(line, msg))
 
 
 class Token(object):

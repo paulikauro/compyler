@@ -16,10 +16,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from lexer import Token
+from astutil import xd
 
 class ParserException(Exception):
     def __init__(self, msg, line):
-        super().__init__("parser error on line {}: {}".format(line, msg))
+        super().__init__("{}: parser: {}".format(line, msg))
 
 
 class Lookahead(object):
@@ -64,14 +65,20 @@ def expect(tok, *expects):
 
 def parse_program(tok):
     ast = ["root", 0]
+    structs = []
+    funcs = []
     while tok.peek != "eof":
         if tok.peek == "struct":
             s = parse_struct(tok)
+            # append struct name into a list
+            # this list will be used by the type checker
+            structs.append(s[2])
             ast.append(s)
         else:
             f = parse_function(tok)
+            funcs.append(s[:-1])
             ast.append(f)
-    return ast
+    return ast, structs
 
 def parse_struct(tok):
     t = expect(tok, "struct")
