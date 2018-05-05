@@ -19,7 +19,6 @@ import sys
 
 from lexer import Lexer
 import parser
-import typecheck
 
 
 userdefined = {
@@ -50,16 +49,16 @@ def main(argv):
         lexer = Lexer(userdefined)
         tokens = lexer.tokenize(source)
 
-        # parse into an abstract syntax tree
-        ast, structs = parser.parse(tokens)
+        funcs, structs = parser.parse(tokens)
 
         # for debug purposes; this will be removed or changed later
-        # prettify_ast returns a lisp-like string representation of the tree
         print("[debug] ast")
-        print(parser.prettify_ast(ast))
+        s = lambda l: "(tree " + " ".join(l) + ")"
+        print(s(map(repr, funcs)))
+        print(s(map(repr, structs)))
 
         # perform type and scope checking
-        tree = typecheck.check(ast, structs)
+        #tree = typecheck.check(ast, structs)
         
     # add LexerException later
     except parser.ParserException as e:

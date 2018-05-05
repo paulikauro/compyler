@@ -16,7 +16,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from lexer import Token
-from astutil import xd
+from astnode import StructAccess, SLiteral, Variable, ILiteral, UnaryOp, PointerOp, BinaryOp, Condition, \
+        CtrlStatement, RetStatement, StoreStatement, VarDeclStatement, StructStoreStatement, \
+        AssignStatement, WhileStatement, IfStatement, BlockStatement, FCallStatement, \
+        Func, Struct, Type
+
 
 class ParserException(Exception):
     def __init__(self, msg, line):
@@ -36,25 +40,6 @@ class Lookahead(object):
             count -= 1
         return a
 
-ast_nodes = ("sliteral", "variable", "fcall", "iliteral", "neg", "inv", "deref", "addrof", "szof", "band", "bor", "bxor", "sra", "srl", "sll", "add", "sub", "eq", "ne", "lt", "gt", "le", "ge", "assign", "sma", "sms", "store", "vardecl", "ret", "cont", "break", "while", "if", "block", "func", "struct", "root")
-
-def prettify_ast(ast):
-    val = "("
-    # remove line numbers where necessary
-    if len(ast) > 1 and ast[0] in ast_nodes:
-        del ast[1]
-    for node in ast:
-        if isinstance(node, list):
-            if not node:
-                # empty list
-                val += "()"
-            else:
-                val += prettify_ast(node)
-        else:
-            val += str(node)
-        val += " "
-    # remove last space and append a closing paren
-    return val[:-1] + ")"
 
 def expect(tok, *expects):
     t = tok.next()
@@ -64,21 +49,16 @@ def expect(tok, *expects):
     raise ParserException("expected {}".format(msg), t.line)
 
 def parse_program(tok):
-    ast = ["root", 0]
     structs = []
     funcs = []
     while tok.peek != "eof":
         if tok.peek == "struct":
             s = parse_struct(tok)
-            # append struct name into a list
-            # this list will be used by the type checker
-            structs.append(s[2])
-            ast.append(s)
+            structs.append(s)
         else:
             f = parse_function(tok)
-            funcs.append(s[:-1])
-            ast.append(f)
-    return ast, structs
+            funcs.append(f)
+    return funcs, structs
 
 def parse_struct(tok):
     t = expect(tok, "struct")
@@ -88,45 +68,43 @@ def parse_struct(tok):
     while tok.peek == "id":
         # member type, member name
         mt, mn = parse_vardecl(tok)
-        expect(tok, ";")
-        decllist.append([mt, mn])
+        line = expect(tok, ";").line
+        decllist.append(VarDeclStatement(line, type=mt, name=mn))
     expect(tok, "}")
-    return ["struct", t.line, name.value, decllist]
+    return Struct(t.line, name=name.value, decls=decllist)
 
 def parse_function(tok):
     ret_type, name = parse_vardecl(tok)
     t = expect(tok, "(")
-    ret = ["func", t.line, ret_type, name]
     arglist = []
     if tok.peek != ")":
         while True:
-            t, p = parse_vardecl(tok)
-            arglist.append([t, p])
+            tt, p = parse_vardecl(tok)
+            arglist.append(VarDeclStatement(t.line, type=tt, name=p))
             if expect(tok, ",", ")") == ")":
                 break
     else:
         tok.next()
-    ret.append(arglist)
+
     # parse function body
-    ret.append(parse_statement(tok))
-    return ret
+    stmt = parse_statement(tok)
+    return Func(t.line, type=ret_type, name=name, args=arglist, stmt=stmt)
 
 def parse_vardecl(tok, t = None):
     # doesn't produce a valid ast node!
     if t == None:
         t = expect(tok, "id")
-    ptr = 0
+    ptr_count = 0
     while tok.peek == "*":
-        ptr += 1
+        ptr_count += 1
         tok.next()
     name = expect(tok, "id")
-    return [t.value, ptr], name.value
+    return Type(t.line, type=t.value, ptr=ptr_count), name.value
 
 def parse_fcall(tok, t):
     # this doesn't accept normal input!
     # skip over (
     tok.next()
-    node = ["fcall", t.line, t.value]
     arglist = []
     if tok.peek != ")":
         while True:
@@ -134,19 +112,21 @@ def parse_fcall(tok, t):
             arglist.append(arg)
             if expect(tok, ")", ",") == ")":
                 break
-    node.append(arglist)
-    return node
+    return FCallStatement(t.line, name=t.value, args=arglist)
 
 def parse_block(tok):
     t = expect(tok, "{")
-    ret = ["block", t.line]
+    stmt_list = []
     while tok.peek != "}":
-        ret.append(parse_statement(tok))
+        s = parse_statement(tok)
+        if isinstance(s, tuple):
+            stmt_list.extend(s)
+        else:
+            stmt_list.append(s)
     tok.next() # skip }
-    return ret
+    return BlockStatement(t.line, stmts=stmt_list)
 
 def parse_if(tok):
-    # else statement
     e = None
     t = expect(tok, "if")
     # condition
@@ -155,13 +135,13 @@ def parse_if(tok):
     s = parse_statement(tok)
     if tok.peek == "else":
         e = parse_statement(tok)
-    return ["if", t.line, c, s, e]
+    return IfStatement(t.line, cond=c, statement=s, elsestmt=e)
 
 def parse_while(tok):
     t = expect(tok, "while")
     c = parse_condition(tok)
     s = parse_statement(tok)
-    return ["while", t.line, c, s]
+    return WhileStatement(t.line, cond=c, statement=s)
 
 def parse_statement(tok):
     if tok.peek == "{":
@@ -173,27 +153,27 @@ def parse_statement(tok):
     elif tok.peek == "break":
         t = tok.next()
         expect(tok, ";")
-        return ["break", t.line]
+        return CtrlStatement(t.line, op="break")
     elif tok.peek == "continue":
         t = tok.next()
         expect(tok, ";")
-        return ["cont", t.line]
+        return CtrlStatement(t.line, op="cont")
     elif tok.peek == "return":
         t = tok.next()
         e = parse_expression(tok)
         expect(tok, ";")
-        return ["ret", t.line, e]
+        return RetStatement(t.line, value=e)
     elif tok.peek == "*":
         # memory store
-        ptr = 0
+        c = 0
         while tok.peek == "*":
-            ptr += 1
+            c += 1
             tok.next()
         f = parse_factor(tok)
         t = expect(tok, "=")
         e = parse_expression(tok)
         expect(tok, ";")
-        return ["store", t.line, ptr, f, e]
+        return StoreStatement(t.line, count=c, ptr=f, value=e)
     else:
         # variable declaration, function call or assignment
         i = expect(tok, "id")
@@ -206,7 +186,10 @@ def parse_statement(tok):
                 tok.next()
                 init = parse_expression(tok)
             expect(tok, ";")
-            return ["vardecl", i.line, t, name, init]
+            
+            decl = VarDeclStatement(i.line, type=t, name=name)
+            assign = AssignStatement(i.line, var=name, value=init)
+            return decl, assign
         elif tok.peek == "(":
             # function call
             f = parse_fcall(tok, i)
@@ -215,83 +198,64 @@ def parse_statement(tok):
         else:
             # assignment or error
             s = i.value
-            nodename = "assign"
+            struct = False
             if tok.peek == ".":
                 s = parse_struct_access(tok, i)
                 # stuct member store
-                nodename = "sms"
+                struct = True
             t = expect(tok, "=")
             e = parse_expression(tok)
             expect(tok, ";")
-            return [nodename, t.line, s, e]
+            if struct:
+                return StructStoreStatement(t.line, struct=s, value=e)
+            else:
+                return AssignStatement(t.line, var=s, value=e)
 
 def parse_condition(tok):
-    ops = {
-        "==": "eq",
-        "!=": "ne",
-        "<": "lt",
-        ">": "gt",
-        "<=": "le",
-        ">=": "ge"
-    }
-    ret = parse_expression(tok)
-    op = expect(tok, *(ops.keys()))
-    return [ops[op.type], tok.peek.line, ret, parse_expression(tok)]
+    ops = ("==", "!=", "<=", ">=", "<", ">")
+    left = parse_expression(tok)
+    op = expect(tok, *(ops))
+    right = parse_expression(tok)
+    return Condition(op.line, op=op.type, left=left, right=right)
 
 def parse_expression(tok):
-    ops = {
-        "+": "add",
-        "-": "sub"
-    }
+    ops = ("+", "-")
     ret = parse_mult(tok)
     while tok.peek.type in ops:
         t = tok.next()
-        ret = [ops[t.type], t.line, ret, parse_mult(tok)]
+        right = parse_mult(tok)
+        ret = BinaryOp(t.line, op=t.type, left=ret, right=right)
     return ret
 
 def parse_mult(tok):
-    ops = {
-        "*": "mul",
-        "/": "div"
-    }
+    ops = ("*", "/")
     ret = parse_shift(tok)
     while tok.peek.type in ops:
         t = tok.next()
-        ret = [ops[t.type], t.line, ret, parse_shift(tok)]
+        right = parse_shift(tok)
+        ret = BinaryOp(t.line, op=t.type, left=ret, right=right)
     return ret
 
 def parse_shift(tok):
-    ops = {
-        ">>>": "sra",
-        ">>": "srl",
-        "<<": "sll"
-    }
+    ops = (">>>", ">>", "<<")
     ret = parse_bitwise(tok)
     while tok.peek.type in ops:
         t = tok.next()
-        ret = [ops[t.type], t.line, ret, parse_bitwise(tok)]
+        right = parse_unary(tok)
+        ret = BinaryOp(t.line, op=t.type, left=ret, right=right)
     return ret
 
 def parse_bitwise(tok):
-    ops = {
-        "&": "band",
-        "|": "bor",
-        "^": "bxor"
-    }
+    ops = ("&", "|", "^")
     ret = parse_unary(tok)
     while tok.peek.type in ops:
         t = tok.next()
-        ret = [ops[t.type], t.line, ret, parse_unary(tok)]
+        right = parse_unary(tok)
+        ret = BinaryOp(t.line, op=t.type, left=ret, right=right)
     return ret
 
 def parse_unary(tok):
-    ops = {
-        "-": "neg",
-        "~": "inv",
-        "*": "deref",
-        "&": "addrof",
-        "sizeof": "szof"
-    }
+    ops = ("-", "~", "*", "&", "sizeof")
     if tok.peek.type not in ops:
         return parse_factor(tok)
 
@@ -307,10 +271,10 @@ def parse_unary(tok):
         return parse_factor(tok)
 
     f = parse_factor(tok)
-    ret = [ops[t.type], t.line, f]
-    if t in ("*", "&"):
-        ret.insert(2, count)
-    return ret
+    if t in ("*", "&", "sizeof"):
+        return PointerOp(t.line, op=t.type, right=f, ptr=count)
+    else:
+        return UnaryOp(t.line, op=t.type, right=f)
 
 def parse_factor(tok):
     t = tok.next()
@@ -319,16 +283,16 @@ def parse_factor(tok):
         expect(tok, ")")
         return node
     elif t == "int":
-        return ["iliteral", t.line, t.value]
+        return ILiteral(t.line, value=t.value)
     elif t == "id":
         if tok.peek == "(":
             return parse_fcall(tok, t)
         elif tok.peek == ".":
             return parse_struct_access(tok, t)
         else:
-            return ["variable", t.line, t.value]
+            return Variable(t.line, name=t.value)
     elif t == "str":
-        return ["sliteral", t.line, t.value]
+        return SLiteral(t.line, value=t.value)
     else:
         raise ParserException("expected a factor", t.line)
 
@@ -338,11 +302,11 @@ def parse_struct_access(tok, t):
     while tok.peek == ".":
         tok.next()
         n = expect(tok, "id")
-        if ret == None:
-            ret = ["sma", t.line, t.value, n.value]
+        if ret is None:
+            ret = StructAccess(t.line, left=t.value, right=n.value)
         else:
             # left associative => left recursive tree
-            ret = ["sma", n.line, ret, n.value]
+            ret = StructAccess(n.line, left=ret, right=n.value)
     return ret
 
 def parse(tokens):
