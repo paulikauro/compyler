@@ -68,7 +68,7 @@ Condition = node("Condition", "op left right")
 CtrlStatement = node("CtrlStatement", "op")
 RetStatement = node("RetStatement", "value")
 StoreStatement = node("StoreStatement", "level ptr value")
-VarDeclStatement = node("VarDeclStatement", "type name")
+VarDeclStatement = node("VarDeclStatement", "type name soffset")
 StructStoreStatement = node("StructStoreStatement", "struct value")
 AssignStatement = node("AssignStatement", "var value")
 WhileStatement = node("WhileStatement", "cond stmt")
@@ -76,10 +76,8 @@ IfStatement = node("IfStatement", "cond stmt elsestmt")
 BlockStatement = node("BlockStatement", "stmts")
 FCallStatement = node("FCallStatement", "name args")
 Func = node("Func", "type name args stmt")
-Struct = node("Struct", "name decls")
+Struct = node("Struct", "name decls size")
 
 # misc
 Type = node("Type", "type level")
-
-
 

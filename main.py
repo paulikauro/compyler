@@ -19,6 +19,7 @@ import sys
 
 from lexer import Lexer
 import parser
+import typecheck
 
 
 userdefined = {
@@ -58,7 +59,9 @@ def main(argv):
         print("(funcs", " ".join(map(repr, funcs)), ")")
 
         # perform type and scope checking
-        #tree = typecheck.check(ast, structs)
+        typecheck.check_structs(structs)
+        print("(structs", " ".join(map(repr, structs)), ")")
+
         
     # add LexerException later
     except parser.ParserException as e:
