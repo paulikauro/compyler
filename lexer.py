@@ -57,7 +57,7 @@ class Lexer(object):
         # actual tokens
         (
         # strings
-        (?P<str>\"(\\.|[^\\\"])*\") (?=\W) |
+        \" (?P<str>(\\.|[^\\\"])*) \" (?=\W) |
 
         # hex integer literals
         (?P<hex>0x[0-9a-fA-F]+) (?=\W) |
