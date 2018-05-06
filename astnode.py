@@ -27,17 +27,22 @@ def node(node_type, slots):
         for attr, value in values.items():
             setattr(self, attr, value)
 
-    # temporary __repr__ method
-    def node_repr(self):
-        def get(a):
-            attr = getattr(self, a)
-            s = str(attr)
-            if isinstance(a, BaseNode):
-                s = a.__repr__()
-            return s
-        s = " ".join(map(get, self.__slots__))
-        return "(" + self.__class__.__name__ + " " + s + ")"
-
+    def node_repr(node):
+        """A generic __repr__ method for the nodes."""
+        s = "(" + node.__class__.__name__ + " "
+        slot_reprs = []
+        for slot in node.__slots__:
+            if slot == "line": continue
+            attr = getattr(node, slot, None)
+            if attr is None:
+                continue
+            elif isinstance(attr, list):
+                reprlist = map(repr, attr)
+                slot_reprs.append("(list " + " ".join(reprlist) + ")")
+            else:
+                slot_reprs.append(repr(attr))
+        s += " ".join(slot_reprs) + ")"
+        return s
 
     # construct a new type and return it
     # "line" will be appended to __slots__ automatically
@@ -54,7 +59,7 @@ SLiteral = node("SLiteral", "value")
 Variable = node("Variable", "name")
 ILiteral = node("ILiteral", "value")
 UnaryOp = node("UnaryOp", "op right")
-PointerOp = node("PointerOp", "op right ptr")
+PointerOp = node("PointerOp", "op right level")
 BinaryOp = node("BinaryOp", "op left right")
 Condition = node("Condition", "op left right")
 
@@ -62,17 +67,19 @@ Condition = node("Condition", "op left right")
 # control flow for loops
 CtrlStatement = node("CtrlStatement", "op")
 RetStatement = node("RetStatement", "value")
-StoreStatement = node("StoreStatement", "count ptr value")
+StoreStatement = node("StoreStatement", "level ptr value")
 VarDeclStatement = node("VarDeclStatement", "type name")
 StructStoreStatement = node("StructStoreStatement", "struct value")
 AssignStatement = node("AssignStatement", "var value")
-WhileStatement = node("WhileStatement", "cond statement")
-IfStatement = node("IfStatement", "cond statement elsestmt")
+WhileStatement = node("WhileStatement", "cond stmt")
+IfStatement = node("IfStatement", "cond stmt elsestmt")
 BlockStatement = node("BlockStatement", "stmts")
 FCallStatement = node("FCallStatement", "name args")
 Func = node("Func", "type name args stmt")
 Struct = node("Struct", "name decls")
 
 # misc
-Type = node("Type", "type ptr")
+Type = node("Type", "type level")
+
+
 

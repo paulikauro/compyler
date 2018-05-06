@@ -53,9 +53,9 @@ def main(argv):
 
         # for debug purposes; this will be removed or changed later
         print("[debug] ast")
-        s = lambda l: "(tree " + " ".join(l) + ")"
-        print(s(map(repr, funcs)))
-        print(s(map(repr, structs)))
+        print("(structs", " ".join(map(repr, structs)), ")")
+        print()
+        print("(funcs", " ".join(map(repr, funcs)), ")")
 
         # perform type and scope checking
         #tree = typecheck.check(ast, structs)
