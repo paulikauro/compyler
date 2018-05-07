@@ -52,12 +52,12 @@ def expand_struct(struct, structs, scope=set(), size=0):
     scope.add(struct.name)
     for decl in struct.decls:
         decl.soffset = size
-        if decl.type.type in scope:
-            raise SemanticsException(decl.line, "recursive struct definition")
-        elif decl.type.level > 0:
+        if decl.type.level > 0:
             size += pointer_size
             newdecls.append(copy(decl))
             continue
+        elif decl.type.type in scope:
+            raise SemanticsException(decl.line, "recursive struct definition")
         elif decl.type.type in builtin_types:
             size += builtin_types[decl.type.type]
             newdecls.append(copy(decl))
@@ -68,9 +68,9 @@ def expand_struct(struct, structs, scope=set(), size=0):
                 field.name = decl.name + "." + field.name
             newdecls.extend(fields)
         else:
-            # also in vardecl
-            raise SemanticsException(decl.line,
-                "type ", decl.type.type, " not found")
+            type_exists(decl)
+            # this should be unreachable
+            raise RuntimeError("unreachable code")
     scope.remove(struct.name)
     return size, newdecls
 
@@ -80,7 +80,7 @@ def check_struct(struct, structs):
     names = set()
     for decl in struct.decls:
         if decl.name in names:
-            raise SemanticExeception(decl.line,
+            raise SemanticsException(decl.line,
                 "struct member ", decl.name, " defined twice")
         names.add(decl.name)
         check(decl, structs)
@@ -91,10 +91,39 @@ def check_struct(struct, structs):
 
 @check.register(astnode.VarDeclStatement)
 def check_vardecl(decl, structs):
+    """Wrapper for type_exists."""
+    type_exists(decl.type.type, structs, decl.line)
+
+def type_exists(typename, structs, line):
     """Checks for undefined types."""
-    if not (decl.type.type in structs or decl.type.type in builtin_types):
-        raise SemanticsException(decl.line,
-            "type ", decl.type.type, " not found")
+    if not (typename in structs or typename in builtin_types):
+        raise SemanticsException(line,
+            "type ", typename, " not found")
 
+@check.register(astnode.Func)
+def check_func(func, funcs, structs):
+    # check if the return type is valid
+    type_exists(func.type.type, structs, func.line)
+    argnames = set()
+    for arg in func.args:
+        if arg.name in argnames:
+            raise SemanticsException(arg.line,
+                "function argument ", arg.name, " defined twice")
+        check_vardecl(arg, structs)
+        argnames.add(arg.name)
+    body_type = check(func.stmt, structs)
+    if body_type != func.type:
+        raise SemanticsException(func.type.line,
+            "return type mismatch or missing return statement")
 
-
+@check.register(astnode.BlockStatement)
+def check_block(block, structs, scope=set()):
+    func_ret = None
+    for stmt in block.stmts:
+        ret = check(stmt, structs, scope)
+        if ret != None:
+            if func_ret == None:
+                func_ret = ret
+            elif func_ret != ret:
+                raise SemanticsException(stmt.line, "return type mismatch")
+    return func_ret

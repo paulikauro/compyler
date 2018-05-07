@@ -15,6 +15,11 @@ u8 *strcpy(u8 *dest, u8 *src) {
 	return dest;
 }
 
+u0 *malloc(u64 size) {
+	# the fastest malloc ever
+	return 0xA110CA7E + size;
+}
+
 u0 main() {
 	u8 *thing = malloc(8);
 	if thing == 0

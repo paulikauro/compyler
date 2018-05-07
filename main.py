@@ -59,12 +59,14 @@ def main(argv):
         print("(funcs", " ".join(map(repr, funcs)), ")")
 
         # perform type and scope checking
-        typecheck.check_structs(structs)
-        print("(structs", " ".join(map(repr, structs)), ")")
+        struct_dict = typecheck.check_structs(structs)
+        print(struct_dict, "\n")
+        aast = typecheck.check_funcs(funcs, struct_dict)
+        print("(aast", " ".join(map(repr, aast)), ")")
 
         
-    # add LexerException later
-    except parser.ParserException as e:
+    # add LexerException later if needed
+    except (parser.ParserException, typecheck.SemanticsException) as e:
         print(argv[1] + ":", e)
         return 1
     
